@@ -34,7 +34,7 @@ jobs:
         env:
           TEST_RUNNER_SNAPSHOT_DIR: ${{ runner.temp }}/snapshots
         run: |
-          xcodebuild -scheme Intunix-Package -destination "id=${{ steps.sim.outputs.udid }}" -only-testing:IntunixUITests test > "$RUNNER_TEMP/test.log" 2>&1 || {
+          xcodebuild -scheme Intunix -destination "id=${{ steps.sim.outputs.udid }}" -only-testing:IntunixUITests test > "$RUNNER_TEMP/test.log" 2>&1 || {
             grep -E "error:|failed|XCTAssert|XCTUnwrap|Testing failed|xcodebuild: error" "$RUNNER_TEMP/test.log" | head -n 30 | while read -r l; do echo "::error::$l"; done
             exit 1
           }
