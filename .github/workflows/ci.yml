@@ -1,0 +1,48 @@
+name: CI
+on:
+  push:
+    branches: [main]
+    tags: ['*']
+  pull_request:
+permissions:
+  contents: write
+jobs:
+  core-linux:
+    runs-on: ubuntu-latest
+    container: swift:6.1-jammy
+    steps:
+      - uses: actions/checkout@v4
+      - run: swift test --filter IntunixCoreTests
+
+  ios:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Core tests (macOS)
+        run: swift test --filter IntunixCoreTests
+      - name: Build the package for iOS
+        run: |
+          set -o pipefail
+          xcodebuild -scheme Intunix -destination 'generic/platform=iOS Simulator' build | tail -n 40
+      - name: Pick a simulator
+        id: sim
+        run: echo "udid=$(xcrun simctl list devices available | grep -m1 -E 'iPhone 1[5-9]' | grep -oE '[0-9A-F-]{36}')" >> "$GITHUB_OUTPUT"
+      - name: Render snapshots
+        env:
+          TEST_RUNNER_SNAPSHOT_DIR: ${{ runner.temp }}/snapshots
+        run: |
+          set -o pipefail
+          xcodebuild -scheme Intunix-Package -destination "id=${{ steps.sim.outputs.udid }}" -only-testing:IntunixUITests test | tail -n 60
+      - name: Build the sample app
+        run: |
+          set -o pipefail
+          brew install xcodegen
+          cd Example && xcodegen generate
+          xcodebuild -project IntunixSample.xcodeproj -scheme IntunixSample -destination 'generic/platform=iOS Simulator' CODE_SIGNING_ALLOWED=NO build | tail -n 40
+      - name: Publish snapshots to the snapshots branch
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: |
+          cd "$RUNNER_TEMP/snapshots"
+          git init -q && git checkout -q -b snapshots
+          git add . && git -c user.name=ci -c user.email=ci@intunix.com commit -qm "Snapshots for ${GITHUB_SHA::7}"
+          git push -qf "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}" snapshots
