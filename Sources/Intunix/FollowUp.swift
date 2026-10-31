@@ -58,7 +58,7 @@ private struct TextAnswer: View {
                         .focused($focused)
                         .padding(.horizontal, 9).padding(.vertical, 5)
                         .frame(minHeight: 120)
-                        .modifier(ClearEditorBackground())
+                        .background(Crisp.card)
                 } else {
                     TextField("", text: $text, prompt: Text(placeholder).foregroundColor(Crisp.neutral))
                         .font(.system(size: 16)).foregroundColor(Crisp.text)
@@ -74,24 +74,21 @@ private struct TextAnswer: View {
             .ring(focused, invalid ? Crisp.error.opacity(0.12) : brand.soft)
             .accessibilityLabel(step.title)
             if input.type == "free", let max = input.maxLength {
-                Text("\(text.count)/\(max)").crispFont(12, .regular, Crisp.muted).frame(maxWidth: .infinity, alignment: .trailing)
+                Text("\(text.utf16.count)/\(max)").crispFont(12, .regular, Crisp.muted).frame(maxWidth: .infinity, alignment: .trailing)
             }
             if invalid { Text("Enter a valid email address.").crispFont(13, .regular, Crisp.error) }
         }
         .onAppear { if case .text(_, let t)? = answer?.value { text = t } }
         .onChange(of: text) { v in
             var next = v
-            if input.type == "free", let max = input.maxLength, next.count > max { next = String(next.prefix(max)); text = next }
+            // UTF-16 length, as JavaScript counts it.
+            if input.type == "free", let max = input.maxLength, next.utf16.count > max {
+                while next.utf16.count > max { next.removeLast() }
+                text = next
+            }
             onChange(Answer(step.id, "followup", .text(type: input.type, text: next)))
         }
         .onChange(of: focused) { f in if !f { touched = true } }
-    }
-}
-
-private struct ClearEditorBackground: ViewModifier {
-    func body(content: Content) -> some View {
-        if #available(iOS 16.0, *) { content.scrollContentBackground(.hidden) }
-        else { content.onAppear { UITextView.appearance().backgroundColor = .clear } }
     }
 }
 #endif

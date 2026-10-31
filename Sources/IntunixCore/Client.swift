@@ -22,7 +22,8 @@ package struct ExperienceResult {
 /// Puts a form on screen and returns once the visitor is done with it.
 @MainActor
 package protocol FormPresenter: AnyObject {
-    func present(_ exp: Experience, _ content: FeedbackContent, _ callbacks: RenderCallbacks) async -> ExperienceResult
+    /// nil when the form could not be put on screen.
+    func present(_ exp: Experience, _ content: FeedbackContent, _ callbacks: RenderCallbacks) async -> ExperienceResult?
 }
 
 package struct ClientConfig {
@@ -88,14 +89,15 @@ package final class IntunixClient {
     }
 
     package func start() {
+        // Registered before anything can mint a session, so the first one is counted too.
+        session.onNewSession { [weak self] _ in
+            guard let self else { return }
+            self.profile.onSessionStart()
+            self.context.removeAll()
+            Task { await self.loadExperiences(); self.rearm() }
+        }
+        Task { await offline.replay { [weak self] in try await self?.flush($0) } }
         Task {
-            await offline.replay { [weak self] in try await self?.flush($0) }
-            session.onNewSession { [weak self] _ in
-                guard let self else { return }
-                self.profile.onSessionStart()
-                self.context.removeAll()
-                Task { await self.loadExperiences(); self.rearm() }
-            }
             _ = session.id()
             await loadExperiences()
             queue.start()
@@ -117,7 +119,7 @@ package final class IntunixClient {
     /// App came to the foreground: renew (or start) the session.
     package func onForeground() { _ = session.id() }
     /// App went to the background: upload buffered events now.
-    package func onBackground() { Task { await queue.drain() } }
+    package func onBackground() async { await queue.drain(persistFirst: true) }
 
     // MARK: catalog
 
@@ -288,8 +290,10 @@ package final class IntunixClient {
         activeId = id
         Task {
             let responseId = newId()
-            let result = await presenter.present(e, content, callbacks(e, ctx, responseId))
-            settle(e, ctx, result, responseId)
+            // nil: the form never reached the screen, so it must not count against cadence.
+            if let result = await presenter.present(e, content, callbacks(e, ctx, responseId)) {
+                settle(e, ctx, result, responseId)
+            }
             pendingShowContext[id] = nil
             showing = false
             activeId = nil

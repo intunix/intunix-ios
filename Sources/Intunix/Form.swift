@@ -27,7 +27,13 @@ final class FormHost: ObservableObject {
 
     var closable: Bool { content.closable }
     func isLastPage() -> Bool { runner.isLastPage() }
-    func impression() { cb.onImpression() }
+    private var impressed = false
+    /// Once per form instance, however often the view appears (navigation, tabs, lists).
+    func impression() {
+        guard !impressed else { return }
+        impressed = true
+        cb.onImpression()
+    }
 
     private func bump() { state = runner.state() }
 
@@ -43,6 +49,7 @@ final class FormHost: ObservableObject {
     }
 
     func close() {
+        guard !settled else { return }
         switch runner.state().phase {
         case .review: if let review { review.onSkip() } else { finish() }
         case .thanks, .done: finish()
@@ -134,6 +141,8 @@ struct FeedbackFormView: View {
             }
         }
         .environment(\.brand, brand)
+        // Forms are light-only, as on web; keeps system text views white in dark mode.
+        .environment(\.colorScheme, .light)
         .environment(\.formWidth, width)
         .background(GeometryReader { g in Color.clear.preference(key: WidthPref.self, value: g.size.width) })
         .onPreferenceChange(WidthPref.self) { measured = $0 }

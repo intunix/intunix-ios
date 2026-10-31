@@ -18,7 +18,7 @@ https://github.com/intunix/intunix-ios
 or in `Package.swift`:
 
 ```swift
-.package(url: "https://github.com/intunix/intunix-ios", from: "1.5.1")
+.package(url: "https://github.com/intunix/intunix-ios", from: "1.5.2")
 ```
 
 ## Set up

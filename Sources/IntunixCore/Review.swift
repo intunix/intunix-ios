@@ -5,7 +5,9 @@ private let scoredRules: Set<String> = ["nps", "csat", "ces", "star", "smileys"]
 /// The URL only if it is absolute http(s); anything else (javascript:, data:, relative) is nil.
 package func safeReviewUrl(_ raw: String?) -> String? {
     let s = raw?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-    guard !s.isEmpty, s.count <= 2048, let c = URLComponents(string: s),
+    // Like the web URL parser, accept spaces and non-ASCII by percent-encoding them.
+    let parsed = URLComponents(string: s) ?? s.addingPercentEncoding(withAllowedCharacters: .urlFragmentAllowed.union(["#", "%"])).flatMap { URLComponents(string: $0) }
+    guard !s.isEmpty, s.count <= 2048, let c = parsed,
           let scheme = c.scheme?.lowercased(), scheme == "http" || scheme == "https",
           let host = c.host, !host.isEmpty else { return nil }
     return s

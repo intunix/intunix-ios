@@ -31,24 +31,35 @@ final class OverlayPresenter: FormPresenter {
         waiters.removeAll()
     }
 
-    func present(_ exp: Experience, _ content: FeedbackContent, _ callbacks: RenderCallbacks) async -> ExperienceResult {
+    func present(_ exp: Experience, _ content: FeedbackContent, _ callbacks: RenderCallbacks) async -> ExperienceResult? {
         if !active { await withCheckedContinuation { waiters.append($0) } }
-        guard let top = Self.topViewController() else { return ExperienceResult(outcome: "timeout", response: nil) }
-        return await withCheckedContinuation { cont in
+        guard let top = Self.topViewController() else { return nil }
+        return await withCheckedContinuation { (cont: CheckedContinuation<ExperienceResult?, Never>) in
+            var resumed = false
+            let finish: (ExperienceResult?) -> Void = { r in
+                guard !resumed else { return }
+                resumed = true
+                cont.resume(returning: r)
+            }
             let frame = FrameState()
-            var vc: UIViewController?
+            weak var weakVC: FormHostingController?
             let host = FormHost(exp: exp, content: content, callbacks: callbacks, openUrl: Self.openUrl) { result in
                 withAnimation(.easeIn(duration: 0.18)) { frame.visible = false }
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
-                    vc?.dismiss(animated: false)
-                    cont.resume(returning: result)
+                    weakVC?.onGone = nil
+                    weakVC?.dismiss(animated: false)
+                    finish(result)
                 }
             }
-            let hosting = UIHostingController(rootView: FormFrame(modal: exp.type == "modal", host: host, frame: frame))
-            hosting.modalPresentationStyle = .overFullScreen
-            hosting.view.backgroundColor = .clear
-            vc = hosting
-            top.present(hosting, animated: false)
+            let vc = FormHostingController(rootView: FormFrame(modal: exp.type == "modal", host: host, frame: frame))
+            vc.modalPresentationStyle = .overFullScreen
+            vc.view.backgroundColor = .clear
+            // The app dismissed us (or its whole stack): treat it as closing the form.
+            vc.onGone = { [weak host] in host?.close() }
+            weakVC = vc
+            top.present(vc, animated: false)
+            // UIKit refuses silently when `top` is busy presenting; then nothing was shown.
+            DispatchQueue.main.async { if vc.presentingViewController == nil { finish(nil) } }
         }
     }
 
@@ -65,6 +76,14 @@ final class OverlayPresenter: FormPresenter {
         var top = window?.rootViewController
         while let next = top?.presentedViewController, !next.isBeingDismissed { top = next }
         return top
+    }
+}
+
+final class FormHostingController: UIHostingController<FormFrame> {
+    var onGone: (() -> Void)?
+    override func viewDidDisappear(_ animated: Bool) {
+        super.viewDidDisappear(animated)
+        if isBeingDismissed || presentingViewController == nil { onGone?(); onGone = nil }
     }
 }
 

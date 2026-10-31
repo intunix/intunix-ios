@@ -46,9 +46,9 @@ struct ScaleStep: View {
 
     var body: some View {
         let ces = step.kind == "ces"
-        let values = ces ? Array(1...(step.scale ?? Defaults.cesScale)) : Array(0...10)
+        let values = ces ? Array(1...max(1, step.scale ?? Defaults.cesScale)) : Array(0...10)
         let defaults = step.kind == "ces" ? Defaults.ces : step.kind == "enps" ? Defaults.enps : Defaults.nps
-        let perRow = !ces && width < Crisp.wideAt ? 6 : values.count
+        let perRow = max(1, !ces && width < Crisp.wideAt ? 6 : values.count)
         let rows = stride(from: 0, to: values.count, by: perRow).map { Array(values[$0..<min($0 + perRow, values.count)]) }
         VStack(spacing: 6) {
             ForEach(rows.indices, id: \.self) { r in
@@ -80,7 +80,7 @@ struct StarStep: View {
     @Environment(\.formWidth) var width
 
     var body: some View {
-        let max = step.max ?? Defaults.starMax
+        let max = Swift.max(1, step.max ?? Defaults.starMax)
         let selected = answer.num ?? 0
         let size: CGFloat = max == 10 ? 42 : 44
         let wide = width >= Crisp.wideAt

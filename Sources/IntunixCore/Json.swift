@@ -39,7 +39,7 @@ package func jsString(_ v: Any?) -> String {
     case .bool(let b): return b ? "true" : "false"
     case .num(let d): return d.truncatingRemainder(dividingBy: 1) == 0 && abs(d) < 1e15 ? String(Int64(d)) : String(d)
     case .str(let s): return s
-    case .other: return "\(v!)"
+    case .other: return jsonSafe(v!) is String ? "\(v!)" : jsonString(v!)
     }
 }
 
@@ -55,9 +55,28 @@ package func parseJSON(_ data: Data?) -> Any? {
 
 package func parseJSON(_ text: String?) -> Any? { parseJSON(text?.data(using: .utf8)) }
 
+/// A value JSONSerialization accepts, matching what JSON.stringify writes on web:
+/// non-finite numbers become null, dates become ISO strings, anything else becomes its description.
+package func jsonSafe(_ value: Any?) -> Any {
+    guard let v = value else { return NSNull() }
+    if v is NSNull || v is String { return v }
+    switch jv(v) {
+    case .bool(let b): return b
+    case .num(let d): return d.isFinite ? v : NSNull()
+    case .null: return NSNull()
+    default: break
+    }
+    if let d = v as? [String: Any] { return d.mapValues { jsonSafe($0) } }
+    if let a = v as? [Any] { return a.map { jsonSafe($0) } }
+    if let date = v as? Date { return ISO8601DateFormatter().string(from: date) }
+    if let url = v as? URL { return url.absoluteString }
+    return "\(v)"
+}
+
 package func jsonString(_ value: Any) -> String {
-    guard JSONSerialization.isValidJSONObject(value),
-          let d = try? JSONSerialization.data(withJSONObject: value, options: [.sortedKeys]) else { return "{}" }
+    let safe = jsonSafe(value)
+    guard JSONSerialization.isValidJSONObject(safe),
+          let d = try? JSONSerialization.data(withJSONObject: safe, options: [.sortedKeys]) else { return "{}" }
     return String(decoding: d, as: UTF8.self)
 }
 

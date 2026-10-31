@@ -93,15 +93,20 @@ struct TapStyle: ButtonStyle {
 private struct Pop: ViewModifier {
     let selected: Bool, rest: CGFloat, from: CGFloat, peak: CGFloat
     @State private var scale: CGFloat? = nil
+    @State private var generation = 0
 
     func body(content: Content) -> some View {
         content
             .scaleEffect(scale ?? (selected ? rest : 1))
             .onChange(of: selected) { on in
+                generation += 1
                 guard on else { withAnimation(.easeOut(duration: 0.12)) { scale = 1 }; return }
+                let g = generation
                 scale = from
                 withAnimation(.easeOut(duration: 0.15)) { scale = peak }
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                    // Deselected (or reselected) meanwhile: that change owns the scale now.
+                    guard g == generation else { return }
                     withAnimation(.easeInOut(duration: 0.17)) { scale = rest }
                 }
             }

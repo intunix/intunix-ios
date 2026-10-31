@@ -45,9 +45,9 @@ package func isAnswerValid(_ step: Step, _ answer: Answer?) -> Bool {
     guard answer.stepId == step.id, answer.kind == step.kind else { return false }
     switch (step.kind, answer.value) {
     case ("nps", .num(let v)), ("enps", .num(let v)): return (0...10).contains(v)
-    case ("star", .num(let v)): return (1...(step.max ?? Defaults.starMax)).contains(v)
+    case ("star", .num(let v)): return v >= 1 && v <= (step.max ?? Defaults.starMax)
     case ("csat", .num(let v)), ("smileys", .num(let v)): return (1...5).contains(v)
-    case ("ces", .num(let v)): return (1...(step.scale ?? Defaults.cesScale)).contains(v)
+    case ("ces", .num(let v)): return v >= 1 && v <= (step.scale ?? Defaults.cesScale)
     case ("thumbs", .choice(let v)): return v == "up" || v == "down"
     case ("pmf", .choice(let v)): return ["very", "somewhat", "not"].contains(v)
     case ("followup", let v): return isFollowUpValid(step, v)
@@ -63,7 +63,8 @@ private func isFollowUpValid(_ step: Step, _ v: AnswerValue) -> Bool {
         guard t == input.type else { return false }
         let text = s.trimmingCharacters(in: .whitespacesAndNewlines)
         if text.isEmpty { return !required }
-        if input.type == "free", let max = input.maxLength { return text.count <= max }
+        // UTF-16 length, as JavaScript counts it.
+        if input.type == "free", let max = input.maxLength { return text.utf16.count <= max }
         return true
     case ("email", .text(let t, let s)):
         guard t == "email" else { return false }

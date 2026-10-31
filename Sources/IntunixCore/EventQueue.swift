@@ -11,6 +11,13 @@ package final class OfflineStore {
         store.set("intunix:offline", jsonString(Array(all.suffix(1000))))
     }
 
+    /// Drop entries that were uploaded after being saved defensively.
+    package func remove(_ batch: [JSONObject]) {
+        let sent = Set(batch.map { jsonString($0) })
+        let left = readAll().filter { !sent.contains(jsonString($0)) }
+        if left.isEmpty { store.remove("intunix:offline") } else { store.set("intunix:offline", jsonString(left)) }
+    }
+
     package func readAll() -> [JSONObject] { (parseJSON(store.get("intunix:offline")) as? [Any])?.compactMap { $0 as? JSONObject } ?? [] }
 
     package func replay(_ flush: ([JSONObject]) async throws -> Void) async {
@@ -51,11 +58,18 @@ package final class EventQueue {
         if buf.count >= max { Task { await drain() } }
     }
 
-    /// Upload what is buffered; on failure the batch goes to disk.
-    package func drain() async {
+    /// Upload what is buffered; on failure the batch goes to disk. When the app backgrounds
+    /// (`persistFirst`) the batch is written to disk first, so a suspend-then-kill loses nothing.
+    package func drain(persistFirst: Bool = false) async {
         guard !buf.isEmpty else { return }
         let batch = buf
         buf.removeAll()
-        do { try await flush(batch) } catch { offline.save(batch) }
+        if persistFirst { offline.save(batch) }
+        do {
+            try await flush(batch)
+            if persistFirst { offline.remove(batch) }
+        } catch {
+            if !persistFirst { offline.save(batch) }
+        }
     }
 }
