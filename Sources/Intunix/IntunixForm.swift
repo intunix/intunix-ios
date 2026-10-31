@@ -76,6 +76,8 @@ public final class IntunixFormUIView: UIView {
                                onHeightChange: { [weak self] h in self?.onHeightChanged?(h) })
         let h = UIHostingController(rootView: view)
         h.view.backgroundColor = .clear
+        // Follow the form's natural height as it changes (pages, follow-up questions).
+        if #available(iOS 16.0, *) { h.sizingOptions = .intrinsicContentSize }
         h.view.translatesAutoresizingMaskIntoConstraints = false
         addSubview(h.view)
         NSLayoutConstraint.activate([
