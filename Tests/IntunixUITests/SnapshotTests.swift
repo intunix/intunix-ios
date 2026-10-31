@@ -2,7 +2,6 @@
 import XCTest
 import SwiftUI
 @testable import Intunix
-import IntunixCore
 
 /// Renders each question type at phone width (360pt) to PNGs in $SNAPSHOT_DIR, for review.
 @MainActor

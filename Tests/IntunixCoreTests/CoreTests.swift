@@ -1,5 +1,5 @@
 import XCTest
-@testable import IntunixCore
+@testable import Intunix
 
 /// Ported from @intunix/core tests (same inputs and expected outputs as the Android port).
 final class CadenceTests: XCTestCase {

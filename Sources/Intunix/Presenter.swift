@@ -1,7 +1,6 @@
 #if os(iOS)
 import SwiftUI
 import UIKit
-import IntunixCore
 
 @MainActor
 final class FrameState: ObservableObject {

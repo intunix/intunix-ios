@@ -8,11 +8,11 @@ let package = Package(
         .library(name: "Intunix", targets: ["Intunix"]),
     ],
     targets: [
-        // Pure logic shared with every platform (ported from @intunix/core). Builds and tests on Linux too.
-        .target(name: "IntunixCore"),
-        // SwiftUI forms and the public API. UI code compiles on iOS only.
-        .target(name: "Intunix", dependencies: ["IntunixCore"]),
-        .testTarget(name: "IntunixCoreTests", dependencies: ["IntunixCore"]),
-        .testTarget(name: "IntunixUITests", dependencies: ["Intunix", "IntunixCore"]),
+        // One module: logic ported from @intunix/core (builds and tests on Linux too) plus the
+        // SwiftUI forms and public API (iOS only). One module keeps CocoaPods' spm_dependency
+        // (React Native) from linking the logic twice.
+        .target(name: "Intunix"),
+        .testTarget(name: "IntunixCoreTests", dependencies: ["Intunix"]),
+        .testTarget(name: "IntunixUITests", dependencies: ["Intunix"]),
     ]
 )

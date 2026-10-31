@@ -1,6 +1,5 @@
 #if os(iOS)
 import SwiftUI
-import IntunixCore
 
 private let autoSubmitKinds: Set<String> = ["thumbs", "pmf", "smileys"]
 

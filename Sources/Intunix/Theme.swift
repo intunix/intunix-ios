@@ -1,6 +1,5 @@
 #if os(iOS)
 import SwiftUI
-import IntunixCore
 
 /// Colours and sizes from FEEDBACK_CSS in @intunix/core (the Crisp style).
 enum Crisp {

@@ -1,6 +1,5 @@
 #if os(iOS)
 import SwiftUI
-import IntunixCore
 
 /// The same SVG geometry as @intunix/core icons.ts, drawn with SwiftUI so phones match the web.
 enum IconSets {

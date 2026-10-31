@@ -1,5 +1,5 @@
 import XCTest
-@testable import IntunixCore
+@testable import Intunix
 
 /// Regressions from the 1.5.1 review.
 final class ReviewFixesTests: XCTestCase {

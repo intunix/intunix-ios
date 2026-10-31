@@ -1,6 +1,5 @@
 #if os(iOS)
 import SwiftUI
-import IntunixCore
 
 @MainActor
 final class InlineFormModel: ObservableObject {

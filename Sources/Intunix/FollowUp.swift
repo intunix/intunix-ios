@@ -1,6 +1,5 @@
 #if os(iOS)
 import SwiftUI
-import IntunixCore
 
 struct FollowUpStep: View {
     let step: Step, answer: Answer?, onChange: OnAnswer

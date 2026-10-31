@@ -1,6 +1,5 @@
 #if os(iOS)
 import SwiftUI
-import IntunixCore
 
 typealias OnAnswer = (Answer?) -> Void
 

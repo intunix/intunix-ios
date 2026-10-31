@@ -1,7 +1,6 @@
 #if os(iOS)
 import Foundation
 import UIKit
-import IntunixCore
 
 /// Options for ``Intunix/initialize(apiKey:options:)``. Names follow the web SDK.
 public struct IntunixOptions {
@@ -33,7 +32,7 @@ public struct IntunixOptions {
 /// Intunix feedback forms for iOS. Call ``initialize(apiKey:options:)`` once at launch.
 /// Every call is safe from any thread.
 public enum Intunix {
-    public static let version = "1.5.5"
+    public static let version = "1.5.6"
 
     @MainActor static var client: IntunixClient?
     @MainActor private static var presenter: OverlayPresenter?
