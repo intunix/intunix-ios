@@ -18,7 +18,7 @@ https://github.com/intunix/intunix-ios
 or in `Package.swift`:
 
 ```swift
-.package(url: "https://github.com/intunix/intunix-ios", from: "1.5.2")
+.package(url: "https://github.com/intunix/intunix-ios", from: "1.5.4")
 ```
 
 ## Set up
@@ -74,6 +74,15 @@ Every call is safe from any thread.
 ```swift
 IntunixForm(form: "post-order")
     .padding()
+```
+
+In UIKit:
+
+```swift
+let form = IntunixFormUIView()
+form.setForm("post-order")
+form.onFinished = { form.isHidden = true }
+stack.addArrangedSubview(form)
 ```
 
 Only one form shows at a time; others wait their turn. A form waits for the app to be active.
