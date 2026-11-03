@@ -18,7 +18,7 @@ https://github.com/intunix/intunix-ios
 or in `Package.swift`:
 
 ```swift
-.package(url: "https://github.com/intunix/intunix-ios", from: "1.5.6")
+.package(url: "https://github.com/intunix/intunix-ios", from: "1.6.0")
 ```
 
 ## Set up
@@ -86,6 +86,19 @@ stack.addArrangedSubview(form)
 ```
 
 Only one form shows at a time; others wait their turn. A form waits for the app to be active.
+
+### Dark mode
+
+Forms follow your app with no extra code. They read the colour scheme of the screen
+they open over, which includes `overrideUserInterfaceStyle`. In the console, each
+form can be locked to light or dark, and its dark background colour can be set.
+Override from code (code wins over the console):
+
+```swift
+Intunix.initialize(apiKey: "int_sk_xxx", options: IntunixOptions(theme: .auto))
+Intunix.setTheme(.dark)                    // any time; open forms switch at once
+IntunixForm(form: "nps-q3", theme: .light)
+```
 
 ### Triggers
 
