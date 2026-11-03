@@ -15,9 +15,10 @@ final class SnapshotTests: XCTestCase {
         return h
     }
 
-    private func shot(_ name: String, _ h: FormHost, width: CGFloat = 360) throws {
+    private func shot(_ name: String, _ h: FormHost, width: CGFloat = 360, theme: IntunixTheme = .light) throws {
         guard #available(iOS 16.0, *) else { throw XCTSkip("ImageRenderer needs iOS 16") }
-        let view = FeedbackFormView(host: h, fixedWidth: width - 40).padding(20).frame(width: width).background(Color.white)
+        let view = FeedbackFormView(host: h, fixedWidth: width - 40).padding(20).frame(width: width).background(Crisp.card)
+            .modifier(FormTheme(brand: h.content.brand, explicit: theme))
         let r = ImageRenderer(content: view)
         r.scale = 2
         let png = try XCTUnwrap(r.uiImage?.pngData())
@@ -50,6 +51,12 @@ final class SnapshotTests: XCTestCase {
     func testChoices() throws {
         try shot("choices", host(#"{"id":"p","kind":"pmf","title":"How would you feel if you could no longer use it?","page":1},{"id":"o","kind":"followup","title":"Pick all that apply","page":1,"input":{"type":"selectMultiple","options":[{"value":"a","label":"Pricing and plans"},{"value":"b","label":"Onboarding experience was confusing for our whole team"},{"value":"c","label":"Speed","emoji":"⚡"}]}},{"id":"f","kind":"followup","title":"Anything else?","page":1,"input":{"type":"free","maxLength":500}}"# + extra,
                                  [Answer("p", "pmf", .choice("somewhat")), Answer("o", "followup", .many(["b", "c"]))]))
+    }
+    func testDark() throws {
+        try shot("dark-scales", host(#"{"id":"a","kind":"nps","title":"How likely are you to recommend us?","page":1},{"id":"s","kind":"star","title":"Rate us","page":1},{"id":"m","kind":"smileys","title":"How do you feel?","icons":"mood","page":1}"# + extra,
+                                     [n("a", "nps", 9), n("s", "star", 4)]), theme: .dark)
+        try shot("dark-choices", host(#"{"id":"t","kind":"thumbs","title":"Was this helpful?","icons":"tone","page":1},{"id":"o","kind":"followup","title":"Pick all that apply","page":1,"input":{"type":"selectMultiple","options":[{"value":"a","label":"Pricing"},{"value":"b","label":"Speed"}]}},{"id":"f","kind":"followup","title":"Anything else?","page":1,"input":{"type":"free","maxLength":500}}"# + extra,
+                                      [Answer("t", "thumbs", .choice("up")), Answer("o", "followup", .many(["b"]))]), theme: .dark)
     }
     func testThanks() throws {
         try shot("thanks", host(#"{"id":"t","kind":"thumbs","title":"Was this helpful?"}"#, [Answer("t", "thumbs", .choice("up"))]))
