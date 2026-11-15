@@ -61,7 +61,7 @@ package final class FeedbackRunner {
 
     @discardableResult package func record(_ a: Answer) -> RunnerState {
         guard phase == .running, onPage(a.stepId) else { return state() }
-        if isEmpty(a) { return clear(a.stepId) }
+        if isEmptyAnswer(a) { return clear(a.stepId) }
         if let i = answers.firstIndex(where: { $0.stepId == a.stepId }) { answers[i] = a } else { answers.append(a) }
         recompute()
         return state()
@@ -186,13 +186,13 @@ package final class FeedbackRunner {
     private func answersForVisible() -> [Answer] {
         answers.filter { a in visible.first { $0.id == a.stepId }.map { isAnswerValid($0, a) } ?? false }
     }
+}
 
-    private func isEmpty(_ a: Answer) -> Bool {
-        switch a.value {
-        case .text(_, let t): return t.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-        case .many(let s): return s.isEmpty
-        case .one(let s): return s.isEmpty
-        default: return false
-        }
+package func isEmptyAnswer(_ a: Answer) -> Bool {
+    switch a.value {
+    case .text(_, let t): return t.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    case .many(let s): return s.isEmpty
+    case .one(let s): return s.isEmpty
+    default: return false
     }
 }

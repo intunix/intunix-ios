@@ -7,9 +7,11 @@ package struct RenderCallbacks {
     package let clientResponseId: String
     package let onReviewEvent: (ReviewEvent) -> Void
     package let locale: LocaleSource?
+    package let conversation: ConversationHandle?
     package init(onImpression: @escaping () -> Void, onResponse: @escaping (Answer) -> Void, onDismiss: @escaping () -> Void,
-                 clientResponseId: String, onReviewEvent: @escaping (ReviewEvent) -> Void, locale: LocaleSource? = nil) {
-        self.locale = locale
+                 clientResponseId: String, onReviewEvent: @escaping (ReviewEvent) -> Void, locale: LocaleSource? = nil,
+                 conversation: ConversationHandle? = nil) {
+        self.locale = locale; self.conversation = conversation
         self.onImpression = onImpression; self.onResponse = onResponse; self.onDismiss = onDismiss
         self.clientResponseId = clientResponseId; self.onReviewEvent = onReviewEvent
     }
@@ -62,6 +64,7 @@ package final class IntunixClient {
     private let shown: ShownStore
     private let offline: OfflineStore
     private let languages: LanguageStore
+    private let conversations: ConversationIds
     private var locale: String?
     private let initLocale: String?
     private var queue: EventQueue!
@@ -92,6 +95,7 @@ package final class IntunixClient {
         shown = ShownStore(store)
         offline = OfflineStore(store, clock: clock)
         languages = LanguageStore(store)
+        conversations = ConversationIds(store)
         locale = cfg.locale; initLocale = cfg.locale
         queue = EventQueue(flushMs: cfg.flushIntervalMs, max: cfg.maxQueueSize, offline: offline) { [weak self] in try await self?.flush($0) }
         triggers = TriggerEvaluator(screenDelayMs: cfg.screenTriggerDelayMs) { [weak self] in self?.enqueueShow($0.id) }
@@ -153,7 +157,7 @@ package final class IntunixClient {
         let sid = session.id()
         if let cached, cached.str("sid") == sid, cached.str("set") == wanted, !force { return }
         do {
-            let q = wanted.addingPercentEncoding(withAllowedCharacters: .alphanumerics.union(CharacterSet(charactersIn: "-_.~"))) ?? wanted
+            let q = enc(wanted)
             let res = try await retry { try await self.http.request("GET", "/sdk/experiences?forms=\(q)", etag: force ? nil : cached?.str("etag")) }
             if res.status == 304 {
                 if var c = cached { c["sid"] = sid; c["set"] = wanted; store.set(Self.cacheKey, jsonString(c)) }
@@ -181,7 +185,7 @@ package final class IntunixClient {
         await ready()
         if let e = find(idOrSlug) { return e }
         do {
-            let path = idOrSlug.addingPercentEncoding(withAllowedCharacters: .alphanumerics.union(CharacterSet(charactersIn: "-_.~"))) ?? idOrSlug
+            let path = enc(idOrSlug)
             let res = try await retry { try await self.http.request("GET", "/sdk/forms/\(path)") }
             guard let o = (parseJSON(res.body) as? JSONObject)?.obj("data")?.obj("experience"), let e = parseExperience(o) else { return nil }
             fetched[e.id] = e
@@ -236,6 +240,7 @@ package final class IntunixClient {
         session.reset()
         context.removeAll()
         languages.clear()
+        conversations.clearAll()
         locale = initLocale
     }
 
@@ -340,11 +345,13 @@ package final class IntunixClient {
                 if let t = ev.triggerThreshold { p["trigger_threshold"] = t }
                 self?.track(ev.name, p)
             },
-            locale: localeSource(perForm: formLocale))
+            locale: localeSource(perForm: formLocale),
+            conversation: e.conversation.map { ConversationHandle(config: $0, transport: sdkTransport(http: http, formId: e.id), conversationId: conversations.idFor(e.id)) })
     }
 
     /// Record the show for cadence and upload the answers. Also used by the inline IntunixForm.
     package func settle(_ e: Experience, _ ctx: JSONObject, _ result: ExperienceResult, _ responseId: String) {
+        if e.conversation != nil { conversations.clear(e.id) }
         let key = identityKey(e, uid: user?.id ?? anon.get(), traits: user?.traits ?? [:], context: ctx)
         shown.markShown(e.id, key, now: clock(), sessionId: session.id())
         profile.recordOutcome(e.id, key, result.outcome)

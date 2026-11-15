@@ -32,6 +32,27 @@ package final class LanguageStore {
     package func clear() { store.remove(Self.key) }
 }
 
+/// One conversation id per form, so a reopened form resumes; cleared when a show ends.
+package final class ConversationIds {
+    private let store: KeyValueStore
+    private static let key = "intunix:conv"
+    package init(_ store: KeyValueStore) { self.store = store }
+    package func idFor(_ formId: String) -> String {
+        var all = read()
+        if let id = all.str(formId) { return id }
+        let id = newId()
+        all[formId] = id
+        store.set(Self.key, jsonString(all))
+        return id
+    }
+    package func clear(_ formId: String) {
+        var all = read()
+        if all.removeValue(forKey: formId) != nil { store.set(Self.key, jsonString(all)) }
+    }
+    package func clearAll() { store.remove(Self.key) }
+    private func read() -> JSONObject { parseJSON(store.get(Self.key)) as? JSONObject ?? [:] }
+}
+
 package func newId() -> String { UUID().uuidString.lowercased() }
 
 package func nowMs() -> Int64 { Int64((Date().timeIntervalSince1970 * 1000).rounded()) }
