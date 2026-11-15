@@ -64,6 +64,8 @@ func free(_ id: String, _ t: String) -> Answer { Answer(id, "followup", .text(ty
 /// Runs a main-actor async body (Linux XCTest cannot discover @MainActor test methods).
 func onMain(_ body: @MainActor @escaping () async -> Void) async { await Task { @MainActor in await body() }.value }
 func settle(_ ms: UInt64 = 40) async { try? await Task.sleep(nanoseconds: ms * 1_000_000) }
+/// Waits for `ok` (polling every 10ms, up to 2s): CI machines are slower than a fixed settle assumes.
+@MainActor func waitUntil(_ ok: () -> Bool) async { for _ in 0..<200 where !ok() { await settle(10) } }
 
 let fastTiming = ConversationTiming(turnTimeoutMs: 200, busyRetryMs: 5, probeTimeoutMs: 200)
 extension ChatMessage { var bare: ChatMessage { ChatMessage(role, text) } }
