@@ -1,14 +1,13 @@
 import SwiftUI
 import Intunix
 
-// Replace with your client key and a form slug from the Intunix console.
-let apiKey = "ck_your_client_key"
-let formSlug = "your-form-slug"
+// Runs against the local mock API: node Intunix/Frontend/intunix-sdk/examples/languages/server.mjs
+let apiKey = "ck_mock"
 
 @main
 struct SampleApp: App {
     init() {
-        Intunix.initialize(apiKey: apiKey, options: IntunixOptions(registerAll: true, debug: true))
+        Intunix.initialize(apiKey: apiKey, options: IntunixOptions(apiHost: "http://127.0.0.1:4100", registerAll: true, debug: true))
     }
 
     var body: some Scene {
@@ -21,12 +20,23 @@ struct ContentView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 12) {
                 Text("Intunix \(Intunix.version)").font(.title2.bold())
-                button("Show form as a popup") { Intunix.showForm(formSlug) }
+                button("Chat with Nia (popup)") { Intunix.showForm("lang-chat") }
+                button("Survey (popup)") { Intunix.showForm("lang-popup") }
+                Text("App language").font(.headline).padding(.top, 8)
+                HStack(spacing: 8) {
+                    ForEach([("English", "en"), ("বাংলা", "bn"), ("العربية", "ar")], id: \.1) { name, tag in
+                        button(name) { Intunix.setLocale(tag) }
+                    }
+                }
                 button("Track \"checkout_completed\"") { Intunix.track("checkout_completed") }
                 button("Identify demo user") { Intunix.identify("demo-user", traits: ["plan": "pro"]) }
                 button("Reset (log out)") { Intunix.reset() }
                 Text("Inline form").font(.headline).padding(.top, 8)
-                IntunixForm(form: formSlug)
+                IntunixForm(form: "lang-inline")
+                    .padding(20)
+                    .background(RoundedRectangle(cornerRadius: 16).fill(Color.white))
+                Text("Inline chat (Arabic)").font(.headline).padding(.top, 8)
+                IntunixForm(form: "lang-chat", locale: "ar")
                     .padding(20)
                     .background(RoundedRectangle(cornerRadius: 16).fill(Color.white))
             }

@@ -4,3 +4,4 @@
 DerivedData/
 Example/*.xcodeproj
 .DS_Store
+Example/Sources/Info.plist

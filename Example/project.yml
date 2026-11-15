@@ -13,6 +13,11 @@ targets:
     sources: [Sources]
     dependencies:
       - package: Intunix
+    info:
+      path: Sources/Info.plist
+      properties:
+        NSAppTransportSecurity:
+          NSAllowsLocalNetworking: true
     settings:
       base:
         GENERATE_INFOPLIST_FILE: YES
