@@ -188,4 +188,21 @@ final class FormControllerTests: XCTestCase {
         XCTAssertEqual(pageLabel(bn, ending: false, paged: true, index: 1, count: 2), "পৃষ্ঠা 2 / 2")
         XCTAssertEqual(pageLabel(bn, ending: true, paged: true, index: 1, count: 2), "সম্পন্ন")
     }
+
+    func testClosingAChatMidAnswerEndsWithTheFreshTurn() async {
+        await onMain {
+            let gate = Gate()
+            let wire = Fake(reply(1, input: stepJson("nps")), gate, reply(3))
+            let rig = Rig(form(multi: true, ai: true), conversation: ConversationConfig(mode: "conversational"), wire: wire)
+            let h = rig.host
+            h.impression(); await settle()
+            h.sendChat(num("nps", 9)); await settle()
+            h.close()
+            gate.complete(reply(2, input: stepJson("csat")))
+            await settle()
+            XCTAssertEqual(wire.sent.map(\.action), ["resume", "answer", "end"])
+            XCTAssertEqual(wire.sent.last?.turn, 2)
+            withExtendedLifetime(rig) {}
+        }
+    }
 }

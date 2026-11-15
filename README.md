@@ -147,7 +147,7 @@ exit intent) are ignored. A form set to show on **Web** only never shows in apps
 The same endpoints as the web SDK, with channel `mobile_sdk` and the header
 `x-intunix-sdk: ios/<version>`. Events that fail to upload are kept on the device and retried
 for a day. A session ends after 30 minutes in the background.
-The `language` the respondent answered in is sent with each response. Conversational
+Multi-language forms send the `language` the respondent answered in. Conversational
 and AI-enhanced forms also send `conversation_id` and use `POST /sdk/forms/:id/turn`.
 
 ## Develop

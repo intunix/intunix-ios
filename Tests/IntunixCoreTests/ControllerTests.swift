@@ -185,6 +185,18 @@ final class ControllerTests: XCTestCase {
         }
     }
 
+    func testALateProbeReplyAfterTheTimeoutIsCancelled() async {
+        await onMain {
+            var cancelled = false
+            let gate = Gate()
+            let r = await bounded(ms: 20) { _ = try await gate.wait(); cancelled = Task.isCancelled; return 1 }
+            XCTAssertNil(r)
+            gate.complete(reply(1))
+            await settle()
+            XCTAssertTrue(cancelled)
+        }
+    }
+
     func testTransportFailureMidConversationContinuesLocallyWithTheNextVisiblePredefinedStep() async {
         await onMain {
             let m = self.make(reply(1, input: S1j), Boom())
