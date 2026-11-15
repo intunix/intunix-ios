@@ -100,6 +100,42 @@ Intunix.setTheme(.dark)                    // any time; open forms switch at onc
 IntunixForm(form: "nps-q3", theme: .light)
 ```
 
+### Languages
+
+A form can be written in several languages (set up in the console). Which one a respondent
+sees is chosen automatically, in this order:
+
+1. the language the respondent picked in the form's switcher (remembered on the device);
+2. your app's language: the `locale` option, `setLocale()`, or the per-form `locale`;
+3. the device's language list;
+4. the form's own default language.
+
+A form with two or more languages shows a language switcher; switching keeps the answers.
+Right-to-left languages (Arabic, Persian, Hebrew, Urdu) lay out right to left natively.
+Responses carry the `language` they were answered in.
+
+```swift
+Intunix.initialize(apiKey: "int_sk_xxx", options: IntunixOptions(locale: "bn"))   // the app's language
+Intunix.setLocale("pt-BR")                                                        // any time; replaces the remembered choice
+IntunixForm(form: "nps-q3", locale: "ar")                                         // this form only
+```
+
+`setLocale()` replaces the remembered choice, so use it when the user picks a language in
+your own settings screen. A form reads its locale when it loads; a form already on screen
+keeps its language until it is shown again. `reset()` (on logout) forgets the remembered
+language. Limit: a follow-up question asked before a language switch stays in the language
+it was asked in.
+
+In UIKit, set `IntunixFormUIView.locale = "ar"` before the form loads.
+
+### Conversational forms
+
+Forms can be AI-enhanced (follow-up questions after an answer) or run as a chat. Both are
+set in the console, so there is nothing to code and no change to existing `showForm` or
+inline form calls. The assistant's name is set in the console too (default "Nia"). If the AI
+is unreachable (offline, or a server error) the form carries on with its own questions. A
+conversation resumes after an app restart until it ends.
+
 ### Triggers
 
 Event (`track`), app screen (`screen`, matching exact / contains / regex), user trait
@@ -111,13 +147,24 @@ exit intent) are ignored. A form set to show on **Web** only never shows in apps
 The same endpoints as the web SDK, with channel `mobile_sdk` and the header
 `x-intunix-sdk: ios/<version>`. Events that fail to upload are kept on the device and retried
 for a day. A session ends after 30 minutes in the background.
+The `language` the respondent answered in is sent with each response. Conversational
+and AI-enhanced forms also send `conversation_id` and use `POST /sdk/forms/:id/turn`.
 
 ## Develop
 
 ```bash
 swift test --filter IntunixCoreTests     # logic tests (ported from @intunix/core); runs on Linux too
-cd Example && xcodegen generate          # sample app (set apiKey and formSlug in SampleApp.swift)
+# the same on Linux, in Docker:
+docker run --rm -v "$PWD":/w -v intunix-ios-build:/build -w /w swift:6.1-jammy swift test --scratch-path /build --filter IntunixCoreTests
+cd Example && xcodegen generate          # sample app (runs against a mock API, see below)
 ```
 
 CI renders every question type on the iOS simulator and pushes the images to the
 `snapshots` branch.
+
+`localize.json` (the shared language fixture) is copied from intunix-sdk; replace it, never edit it.
+
+The sample runs against a mock API (`node examples/languages/server.mjs` in intunix-sdk) with
+the `lang-chat`, `lang-popup` and `lang-inline` forms. It reaches your computer at `127.0.0.1`,
+which works on the iOS simulator only; on a physical device change `apiHost` in `SampleApp.swift`
+to `http://<your computer's LAN IP>:4100`.
