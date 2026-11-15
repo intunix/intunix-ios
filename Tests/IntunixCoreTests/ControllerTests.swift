@@ -34,7 +34,7 @@ final class ControllerTests: XCTestCase {
             await p.value
             XCTAssertEqual(m.t.sent, [TurnRequest("cid-12345", 0, "resume", nil, "en")])
             let s = m.ctl.state
-            XCTAssertEqual(s.messages, [nia("Hi")])
+            XCTAssertEqual(s.messages.bare, [nia("Hi")])
             XCTAssertEqual(s.input?.id, "s1")
             XCTAssertFalse(s.pending); XCTAssertFalse(s.local)
         }
@@ -48,7 +48,7 @@ final class ControllerTests: XCTestCase {
             var r = reply(5, "ignored", input: S3j); r["transcript"] = self.transcriptJson(transcript)
             let m = self.make(r)
             await m.ctl.start()
-            XCTAssertEqual(m.ctl.state.messages, transcript)
+            XCTAssertEqual(m.ctl.state.messages.bare, transcript)
         }
     }
 
@@ -59,7 +59,7 @@ final class ControllerTests: XCTestCase {
             let m = self.make(r)
             await m.ctl.start(); await m.ctl.start()
             XCTAssertEqual(m.t.sent.count, 1)
-            XCTAssertTrue(m.ctl.state.done); XCTAssertNil(m.ctl.state.input); XCTAssertEqual(m.ctl.state.messages, transcript)
+            XCTAssertTrue(m.ctl.state.done); XCTAssertNil(m.ctl.state.input); XCTAssertEqual(m.ctl.state.messages.bare, transcript)
         }
     }
 
@@ -70,7 +70,7 @@ final class ControllerTests: XCTestCase {
             await m.ctl.start()
             let p = Task { await m.ctl.answer(num("s1", 9)) }
             await settle()
-            XCTAssertEqual(m.ctl.state.messages.filter { $0.role == "respondent" }, [ChatMessage("respondent", "9")])
+            XCTAssertEqual(m.ctl.state.messages.filter { $0.role == "respondent" }.bare, [ChatMessage("respondent", "9")])
             XCTAssertTrue(m.ctl.state.pending)
             gate.complete(reply(5, "Thanks", input: S3j, answered: 1))
             _ = await p.value
@@ -220,7 +220,7 @@ final class ControllerTests: XCTestCase {
             await m.ctl.start()
             await m.ctl.skip()
             XCTAssertTrue(m.ctl.state.local); XCTAssertEqual(m.ctl.state.input?.id, "s1")
-            XCTAssertEqual(m.ctl.state.messages, [nia("Q s1")])
+            XCTAssertEqual(m.ctl.state.messages.bare, [nia("Q s1")])
         }
     }
 
@@ -230,7 +230,7 @@ final class ControllerTests: XCTestCase {
             await m.ctl.start()
             let s = m.ctl.state
             XCTAssertTrue(s.local); XCTAssertFalse(s.pending); XCTAssertFalse(s.done)
-            XCTAssertEqual(s.messages, [nia("Welcome"), nia("Q s1")])
+            XCTAssertEqual(s.messages.bare, [nia("Welcome"), nia("Q s1")])
             XCTAssertEqual(s.input?.id, "s1")
             XCTAssertEqual(s.answered, 0); XCTAssertEqual(s.total, 2)
             XCTAssertEqual(m.t.sent.count, 1)
@@ -244,12 +244,12 @@ final class ControllerTests: XCTestCase {
             _ = await m.ctl.answer(num("s1", 8))
             let s = m.ctl.state
             XCTAssertTrue(s.done); XCTAssertNil(s.input); XCTAssertTrue(s.local)
-            XCTAssertEqual(s.messages.last, nia("Cheers"))
+            XCTAssertEqual(s.messages.last?.bare, nia("Cheers"))
             XCTAssertTrue(m.ctl.result().completed)
             let c = self.make(Boom(), c: content([S1j]), config: cc("All done"))
             await c.ctl.start()
             _ = await c.ctl.answer(num("s1", 8))
-            XCTAssertEqual(c.ctl.state.messages.last, nia("All done"))
+            XCTAssertEqual(c.ctl.state.messages.last?.bare, nia("All done"))
         }
     }
 
@@ -300,7 +300,7 @@ final class ControllerTests: XCTestCase {
             _ = await m.ctl.answer(free("probe:s1:1", "slow app"))
             XCTAssertEqual(m.t.sent[1].answer, free("probe:s1:1", "slow app"))
             XCTAssertEqual(m.ctl.result().answers, [free("probe:s1:1", "slow app")])
-            XCTAssertEqual(m.ctl.state.messages[0], ChatMessage("respondent", "slow app"))
+            XCTAssertEqual(m.ctl.state.messages[0].bare, ChatMessage("respondent", "slow app"))
         }
     }
 
@@ -665,19 +665,74 @@ final class ControllerTests: XCTestCase {
             await m.ctl.start()
             m.ctl.setLanguage("bn", content: content([S1j]), config: cc("সব শেষ"))
             _ = await m.ctl.answer(num("s1", 8))
-            XCTAssertEqual(m.ctl.state.messages.last, nia("সব শেষ"))
+            XCTAssertEqual(m.ctl.state.messages.last?.bare, nia("সব শেষ"))
         }
     }
 
-    func testSetLanguageLeavesInputUntouchedAndSilentOnAServerTurn() async {
+    private static let BN = content([nps("s1", title: "প্রথম"), nps("s3", title: "তৃতীয়")])
+    private static let cfgBn = ConversationConfig(mode: "conversational", welcomeMessage: "স্বাগতম", completionMessage: "শেষ")
+    private static let cfgEn = ConversationConfig(mode: "conversational", welcomeMessage: "Welcome", completionMessage: "Done")
+
+    func testSetLanguageServerInputWithAPredefinedIdIsSwappedProbesStay() async {
         await onMain {
-            let m = self.make(reply(1, input: S1j))
+            let m = self.make(reply(1, input: S1j), reply(2, input: probeJson("probe:1", title: "Why?")))
             await m.ctl.start()
-            var n = 0
-            _ = m.ctl.subscribe { n += 1 }
             m.ctl.setLanguage("bn", content: content([nps("s1", title: "নতুন")]))
-            XCTAssertEqual(m.ctl.state.input?.title, "Q s1")
-            XCTAssertEqual(n, 0)
+            XCTAssertEqual(m.ctl.state.input?.title, "নতুন")
+            _ = await m.ctl.answer(num("s1", 9))
+            let probe = m.ctl.state.input
+            m.ctl.setLanguage("en", content: content([S1j]))
+            XCTAssertEqual(m.ctl.state.input?.id, probe?.id)
+            XCTAssertEqual(m.ctl.state.input?.title, probe?.title)
+        }
+    }
+
+    func testSetLanguageWelcomeQuestionsAndAnswersReRenderProbesStay() async {
+        await onMain {
+            let m = self.make(reply(1, "Welcome", "Q s1", input: S1j), reply(2, "Why 9?", input: probeJson("probe:1", title: "Why 9?")),
+                              reply(3, "Q s3", input: S3j), c: content([S1j, S3j]), config: ControllerTests.cfgEn)
+            await m.ctl.start()
+            _ = await m.ctl.answer(num("s1", 9))
+            _ = await m.ctl.answer(free("probe:1", "because"))
+            m.ctl.setLanguage("bn", content: ControllerTests.BN, config: ControllerTests.cfgBn)
+            XCTAssertEqual(m.ctl.state.messages.map(\.text), ["স্বাগতম", "প্রথম", "9", "Why 9?", "because", "তৃতীয়"])
+            XCTAssertEqual(m.ctl.state.input?.title, "তৃতীয়")
+        }
+    }
+
+    func testSetLanguageAChoiceAnswerTakesItsLabelFromTheNewLanguage() async {
+        await onMain {
+            func csat(_ l: String) -> String { stepJson("s1", ",\"labels\":\(l)", kind: "csat", title: "Q") }
+            let en = csat(#"["Bad","Ok","Good","Great","Best"]"#)
+            let m = self.make(reply(1, "Q", input: en), reply(2), c: content([en]))
+            await m.ctl.start()
+            _ = await m.ctl.answer(Answer("s1", "csat", .num(2)))
+            XCTAssertEqual(m.ctl.state.messages.last?.text, "Ok")
+            m.ctl.setLanguage("bn", content: content([csat(#"["খারাপ","ঠিক","ভালো","দারুণ","সেরা"]"#)]))
+            XCTAssertEqual(m.ctl.state.messages.last?.text, "ঠিক")
+        }
+    }
+
+    func testSetLanguageTheCompletionMessageReRenders() async {
+        await onMain {
+            let m = self.make(Boom(), c: content([S1j]), config: ControllerTests.cfgEn)
+            await m.ctl.start()
+            _ = await m.ctl.answer(num("s1", 8))
+            XCTAssertEqual(m.ctl.state.messages.last?.text, "Done")
+            m.ctl.setLanguage("bn", content: content([S1j]), config: ControllerTests.cfgBn)
+            XCTAssertEqual(m.ctl.state.messages.last?.text, "শেষ")
+        }
+    }
+
+    func testSetLanguageARestoredTranscriptIsTaggedSoItReRendersToo() async {
+        await onMain {
+            let tr = [nia("Welcome"), nia("Q s1"), ChatMessage("respondent", "9"), nia("Why?")]
+            var r = reply(1, input: S3j); r["transcript"] = self.transcriptJson(tr)
+            r["answers"] = [jobj(#"{"stepId":"s1","kind":"nps","value":9}"#)]
+            let m = self.make(r, c: content([S1j, S3j]), config: ControllerTests.cfgEn)
+            await m.ctl.start()
+            m.ctl.setLanguage("bn", content: ControllerTests.BN, config: ControllerTests.cfgBn)
+            XCTAssertEqual(m.ctl.state.messages.map(\.text), ["স্বাগতম", "প্রথম", "9", "Why?"])
         }
     }
 

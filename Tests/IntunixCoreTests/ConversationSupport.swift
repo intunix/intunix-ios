@@ -66,3 +66,5 @@ func onMain(_ body: @MainActor @escaping () async -> Void) async { await Task { 
 func settle(_ ms: UInt64 = 40) async { try? await Task.sleep(nanoseconds: ms * 1_000_000) }
 
 let fastTiming = ConversationTiming(turnTimeoutMs: 200, busyRetryMs: 5, probeTimeoutMs: 200)
+extension ChatMessage { var bare: ChatMessage { ChatMessage(role, text) } }
+extension Array where Element == ChatMessage { var bare: [ChatMessage] { map(\.bare) } }
