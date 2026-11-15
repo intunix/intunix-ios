@@ -73,6 +73,7 @@ func settle(_ ms: UInt64 = 40) async { try? await Task.sleep(nanoseconds: ms * s
 /// Waits for `ok` (polling every 10ms, up to 2s): CI machines are slower than a fixed settle assumes.
 @MainActor func waitUntil(_ ok: () -> Bool) async { for _ in 0..<200 where !ok() { await settle(10) } }
 
-let fastTiming = ConversationTiming(turnTimeoutMs: 200, busyRetryMs: 5, probeTimeoutMs: 200)
+// Scaled with settle(): a held request must not hit the timeout while a test is still waiting on it.
+let fastTiming = ConversationTiming(turnTimeoutMs: 200 * settleScale, busyRetryMs: 5, probeTimeoutMs: 200 * settleScale)
 extension ChatMessage { var bare: ChatMessage { ChatMessage(role, text) } }
 extension Array where Element == ChatMessage { var bare: [ChatMessage] { map(\.bare) } }

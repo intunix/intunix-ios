@@ -546,7 +546,7 @@ final class ControllerTests: XCTestCase {
         await onMain {
             let m = self.make(reply(1, input: S1j), reply(2, busy: true), reply(1, input: S3j))
             let slow = ConversationController(content: FORM, handle: ConversationHandle(config: cfgC, transport: m.t.transport, conversationId: "c"),
-                                               locale: nil, timing: ConversationTiming(turnTimeoutMs: 200, busyRetryMs: 150, probeTimeoutMs: 200))
+                                               locale: nil, timing: ConversationTiming(turnTimeoutMs: 200 * settleScale, busyRetryMs: 150, probeTimeoutMs: 200 * settleScale))
             await slow.start()
             let p = Task { await slow.answer(num("s1", 9)) }
             await settle(40)

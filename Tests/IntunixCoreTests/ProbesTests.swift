@@ -223,7 +223,7 @@ final class ProbesTests: XCTestCase {
     func testClearsTheBusyRetryWaitWhenTheBudgetEndsFirst() async {
         await onMain {
             let t = Fake(reply(busy: true), Hang())
-            let timing = ConversationTiming(turnTimeoutMs: 200, busyRetryMs: 5, probeTimeoutMs: 100)
+            let timing = ConversationTiming(turnTimeoutMs: 200 * settleScale, busyRetryMs: 5, probeTimeoutMs: 100 * settleScale)
             _ = await self.probes(t, timing: timing).afterPage([self.npsStep("s1")], [self.ans("s1")])
             XCTAssertEqual(t.sent.count, 2)
         }
@@ -269,7 +269,7 @@ final class ProbesTests: XCTestCase {
     func testABusyRetryKeepsItsFirstLocaleTheNextRequestUsesTheNewOne() async {
         await onMain {
             let t = Fake(reply(2, busy: true), reply(3), reply(4))
-            let p = self.probes(t, timing: ConversationTiming(turnTimeoutMs: 200, busyRetryMs: 60, probeTimeoutMs: 500))
+            let p = self.probes(t, timing: ConversationTiming(turnTimeoutMs: 200 * settleScale, busyRetryMs: 60, probeTimeoutMs: 500 * settleScale))
             let out = Task { await p.afterPage([self.npsStep("s1")], [self.ans("s1")]) }
             await settle(20)
             p.setLocale("ar")
