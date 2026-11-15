@@ -80,13 +80,13 @@ final class SnapshotTests: XCTestCase {
 
     func testSwitcherBengali() throws {
         let h = multi(device: "bn")
-        h.onChange("nps", n("nps", 9)); h.submitPage()
+        h.onChange("nps", n("nps", "nps", 9)); h.submitPage()
         try shot("switcherBengali", h)
     }
 
     func testRtlArabic() throws {
         let h = multi(device: "ar")
-        h.onChange("nps", n("nps", 9)); h.submitPage()
+        h.onChange("nps", n("nps", "nps", 9)); h.submitPage()
         try shot("rtlArabic", h)
     }
 
@@ -101,7 +101,7 @@ final class SnapshotTests: XCTestCase {
         let h = multi(device: "ar", conversation: ConversationConfig(mode: "conversational", assistantName: "Ava"), transport: { _ in script.removeFirst() })
         h.impression()
         await Task.yield(); try await Task.sleep(nanoseconds: 100_000_000)
-        h.sendChat(n("nps", 8))
+        h.sendChat(n("nps", "nps", 8))
         try await Task.sleep(nanoseconds: 100_000_000)
         try render("chatArabic", ChatForm(host: h, fixedWidth: 320), h)
     }
@@ -115,7 +115,7 @@ final class SnapshotTests: XCTestCase {
         })
         h.impression()
         try await Task.sleep(nanoseconds: 100_000_000)
-        h.sendChat(n("nps", 8))
+        h.sendChat(n("nps", "nps", 8))
         try await Task.sleep(nanoseconds: 100_000_000)
         try render("chatEnglishTyping", ChatForm(host: h, fixedWidth: 320), h)
     }
