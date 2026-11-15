@@ -6,8 +6,10 @@ package struct RenderCallbacks {
     package let onDismiss: () -> Void
     package let clientResponseId: String
     package let onReviewEvent: (ReviewEvent) -> Void
+    package let locale: LocaleSource?
     package init(onImpression: @escaping () -> Void, onResponse: @escaping (Answer) -> Void, onDismiss: @escaping () -> Void,
-                 clientResponseId: String, onReviewEvent: @escaping (ReviewEvent) -> Void) {
+                 clientResponseId: String, onReviewEvent: @escaping (ReviewEvent) -> Void, locale: LocaleSource? = nil) {
+        self.locale = locale
         self.onImpression = onImpression; self.onResponse = onResponse; self.onDismiss = onDismiss
         self.clientResponseId = clientResponseId; self.onReviewEvent = onReviewEvent
     }
@@ -35,11 +37,13 @@ package struct ClientConfig {
     package var screenTriggerDelayMs: UInt64
     package var disableEventApi: Bool
     package var sdkVersion: String
+    package var locale: String?
     package init(apiKey: String, apiHost: String, registerAll: Bool, register: [String], flushIntervalMs: UInt64,
-                 maxQueueSize: Int, screenTriggerDelayMs: UInt64, disableEventApi: Bool, sdkVersion: String) {
+                 maxQueueSize: Int, screenTriggerDelayMs: UInt64, disableEventApi: Bool, sdkVersion: String, locale: String? = nil) {
         self.apiKey = apiKey; self.apiHost = apiHost; self.registerAll = registerAll; self.register = register
         self.flushIntervalMs = flushIntervalMs; self.maxQueueSize = maxQueueSize; self.screenTriggerDelayMs = screenTriggerDelayMs
         self.disableEventApi = disableEventApi; self.sdkVersion = sdkVersion
+        self.locale = locale
     }
 }
 
@@ -57,6 +61,9 @@ package final class IntunixClient {
     private let profile: ProfileStore
     private let shown: ShownStore
     private let offline: OfflineStore
+    private let languages: LanguageStore
+    private var locale: String?
+    private let initLocale: String?
     private var queue: EventQueue!
     private var triggers: TriggerEvaluator!
 
@@ -84,6 +91,8 @@ package final class IntunixClient {
         profile = ProfileStore(store, clock: clock)
         shown = ShownStore(store)
         offline = OfflineStore(store, clock: clock)
+        languages = LanguageStore(store)
+        locale = cfg.locale; initLocale = cfg.locale
         queue = EventQueue(flushMs: cfg.flushIntervalMs, max: cfg.maxQueueSize, offline: offline) { [weak self] in try await self?.flush($0) }
         triggers = TriggerEvaluator(screenDelayMs: cfg.screenTriggerDelayMs) { [weak self] in self?.enqueueShow($0.id) }
     }
@@ -226,6 +235,16 @@ package final class IntunixClient {
         anon.reset()
         session.reset()
         context.removeAll()
+        languages.clear()
+        locale = initLocale
+    }
+
+    /// The app's language changed: later forms use `code`, replacing the respondent's remembered choice.
+    package func setLocale(_ code: String) { locale = code; languages.remember(code) }
+
+    package func localeSource(perForm: String? = nil) -> LocaleSource {
+        LocaleSource(developer: { [weak self] in perForm ?? self?.locale }, remembered: { [languages] in languages.remembered() },
+                     remember: { [languages] in languages.remember($0) })
     }
 
     package func setContext(_ patch: JSONObject?) {
@@ -301,7 +320,7 @@ package final class IntunixClient {
         }
     }
 
-    package func callbacks(_ e: Experience, _ ctx: JSONObject, _ responseId: String) -> RenderCallbacks {
+    package func callbacks(_ e: Experience, _ ctx: JSONObject, _ responseId: String, formLocale: String? = nil) -> RenderCallbacks {
         RenderCallbacks(
             onImpression: { [weak self] in
                 guard let self else { return }
@@ -320,7 +339,8 @@ package final class IntunixClient {
                                      "review_url": ev.reviewUrl, "trigger_rule": ev.triggerRule]
                 if let t = ev.triggerThreshold { p["trigger_threshold"] = t }
                 self?.track(ev.name, p)
-            })
+            },
+            locale: localeSource(perForm: formLocale))
     }
 
     /// Record the show for cadence and upload the answers. Also used by the inline IntunixForm.
@@ -337,6 +357,8 @@ package final class IntunixClient {
             "client_response_id": responseId,
         ]
         if let id = user?.id { body["user_id"] = id }
+        if let l = fb.language { body["language"] = l }
+        if let c = fb.conversationId { body["conversation_id"] = c }
         let path = "/sdk/forms/\(e.id)/response"
         Task {
             do { _ = try await retry { try await self.http.request("POST", path, body: body) } }

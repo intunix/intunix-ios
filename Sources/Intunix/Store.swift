@@ -22,6 +22,16 @@ package final class DefaultsStore: KeyValueStore {
     package func remove(_ key: String) { d.removeObject(forKey: key) }
 }
 
+/// The language a respondent picked in a multi-language form, remembered across forms.
+package final class LanguageStore {
+    private let store: KeyValueStore
+    private static let key = "intunix:lang"
+    package init(_ store: KeyValueStore) { self.store = store }
+    package func remembered() -> String? { store.get(Self.key) }
+    package func remember(_ code: String) { store.set(Self.key, code) }
+    package func clear() { store.remove(Self.key) }
+}
+
 package func newId() -> String { UUID().uuidString.lowercased() }
 
 package func nowMs() -> Int64 { Int64((Date().timeIntervalSince1970 * 1000).rounded()) }

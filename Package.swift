@@ -12,7 +12,7 @@ let package = Package(
         // SwiftUI forms and public API (iOS only). One module keeps CocoaPods' spm_dependency
         // (React Native) from linking the logic twice.
         .target(name: "Intunix"),
-        .testTarget(name: "IntunixCoreTests", dependencies: ["Intunix"]),
+        .testTarget(name: "IntunixCoreTests", dependencies: ["Intunix"], exclude: ["Fixtures"]),
         .testTarget(name: "IntunixUITests", dependencies: ["Intunix"]),
     ]
 )
