@@ -167,7 +167,8 @@ final class ControllerTests: XCTestCase {
         }
     }
 
-    func testEndWhilePendingIsImmediateAndTheInFlightReplyIsIgnored() async {
+    func testEndWhilePendingIsImmediateAndTheInFlightReplyIsIgnored() async throws {
+        try skipOnMacOS()
         await onMain {
             let gate = Gate()
             let m = self.make(reply(1, input: S1j), gate, reply(1))
@@ -343,7 +344,8 @@ final class ControllerTests: XCTestCase {
         }
     }
 
-    func testCanSkipTracksOptionalRequiredPendingAndDone() async {
+    func testCanSkipTracksOptionalRequiredPendingAndDone() async throws {
+        try skipOnMacOS()
         await onMain {
             let gate = Gate()
             let m = self.make(reply(1, input: followup("f", required: false)), gate, reply(3, input: followup("f", required: false)))
@@ -422,7 +424,8 @@ final class ControllerTests: XCTestCase {
         }
     }
 
-    func testEndDuringAnInFlightRequestIsSentAfterItSettlesWithTheLatestTurn() async {
+    func testEndDuringAnInFlightRequestIsSentAfterItSettlesWithTheLatestTurn() async throws {
+        try skipOnMacOS()
         await onMain {
             let gate = Gate()
             let m = self.make(reply(1, input: S1j), gate, reply(1))
@@ -576,7 +579,8 @@ final class ControllerTests: XCTestCase {
         }
     }
 
-    func testAfterEndStillDeliversOneEndRequestAfterTheInFlightTurnWithItsNextTurn() async {
+    func testAfterEndStillDeliversOneEndRequestAfterTheInFlightTurnWithItsNextTurn() async throws {
+        try skipOnMacOS()
         await onMain {
             let gate = Gate()
             let m = self.make(reply(1, input: S1j), gate, reply(1))
@@ -610,7 +614,8 @@ final class ControllerTests: XCTestCase {
         }
     }
 
-    func testAfterEndSendsNoEndWhenTheInFlightRequestRejects() async {
+    func testAfterEndSendsNoEndWhenTheInFlightRequestRejects() async throws {
+        try skipOnMacOS()
         await onMain {
             let gate = Gate()
             let m = self.make(reply(1, input: S1j), gate)

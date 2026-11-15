@@ -77,3 +77,10 @@ func settle(_ ms: UInt64 = 40) async { try? await Task.sleep(nanoseconds: ms * s
 let fastTiming = ConversationTiming(turnTimeoutMs: 200 * settleScale, busyRetryMs: 5, probeTimeoutMs: 200 * settleScale)
 extension ChatMessage { var bare: ChatMessage { ChatMessage(role, text) } }
 extension Array where Element == ChatMessage { var bare: [ChatMessage] { map(\.bare) } }
+
+/// Gate + end() tests race the runner clock; macOS CI is ~5x slower, so they run on the Linux job only.
+func skipOnMacOS() throws {
+#if os(macOS)
+    throw XCTSkip("timing-sensitive; covered by the Linux CI job")
+#endif
+}
