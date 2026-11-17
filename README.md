@@ -23,6 +23,8 @@ or in `Package.swift`:
 
 ## Set up
 
+> **Use a publishable key** (`int_pk_...`, created in Settings → API keys as *Publishable*). It is safe to ship in an app: it can only load forms and send responses and events. Never put a secret key (`int_sk_...`) in an app or website; those are for server APIs such as Auto Send and user data deletion.
+
 Call `initialize` once at launch:
 
 ```swift
@@ -95,7 +97,7 @@ form can be locked to light or dark, and its dark background colour can be set.
 Override from code (code wins over the console):
 
 ```swift
-Intunix.initialize(apiKey: "int_sk_xxx", options: IntunixOptions(theme: .auto))
+Intunix.initialize(apiKey: "int_pk_xxx", options: IntunixOptions(theme: .auto))
 Intunix.setTheme(.dark)                    // any time; open forms switch at once
 IntunixForm(form: "nps-q3", theme: .light)
 ```
@@ -115,7 +117,7 @@ Right-to-left languages (Arabic, Persian, Hebrew, Urdu) lay out right to left na
 Responses carry the `language` they were answered in.
 
 ```swift
-Intunix.initialize(apiKey: "int_sk_xxx", options: IntunixOptions(locale: "bn"))   // the app's language
+Intunix.initialize(apiKey: "int_pk_xxx", options: IntunixOptions(locale: "bn"))   // the app's language
 Intunix.setLocale("pt-BR")                                                        // any time; replaces the remembered choice
 IntunixForm(form: "nps-q3", locale: "ar")                                         // this form only
 ```
